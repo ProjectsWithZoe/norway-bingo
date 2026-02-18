@@ -67,34 +67,42 @@ export default function App() {
     try {
       setLoading(true);
       setError(null);
-
+  
       const { data, error } = await supabase
         .from("norway_bingo_progress")
         .select("*")
-        .eq("username", name)
-        .single();
-
-      if (error && error.code !== "PGRST116") throw error;
-
-      if (data) {
-        setBoard(data.board);
-        setMarked(data.marked);
+        .eq("username", name);
+  
+      if (error) throw error;
+  
+      if (data && data.length > 0) {
+        // Existing user
+        setBoard(data[0].board);
+        setMarked(data[0].marked);
       } else {
+        // New user
         const newBoard = generateRandomBoard();
-
-        await supabase.from("norway_bingo_progress").insert({
-          username: name,
-          marked: Array(24).fill(false),
-          board: newBoard
-        });
-
+  
+        const { error: insertError } = await supabase
+          .from("norway_bingo_progress")
+          .insert({
+            username: name,
+            marked: Array(24).fill(false),
+            board: newBoard
+          });
+  
+        if (insertError) throw insertError;
+  
         setBoard(newBoard);
+        setMarked(Array(24).fill(false));
       }
-
+  
       setUser(name);
       localStorage.setItem("norwayBingoUser", name);
-    } catch {
-      setError("Something went wrong.");
+  
+    } catch (err) {
+      console.error(err);
+      setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
